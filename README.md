@@ -16,11 +16,35 @@ Batch rename truenas snapshots.
 ## examples
 Recursively rename snapshots from /tank/dataset1/child and its descendants
 ```bash
-./rename -R -m "@auto" /tank/dataset1/child @auto @manual
-```
-example output
-```
+./rename -f -R -m "@auto" /tank/dataset1/child @auto @manual
+---
 previous snapshot name: /tank/dataset1/child/child@auto-2023-09-25_00-00
 new snapshot name:      /tank/dataset1/child/child@daily-2023-09-25_00-00
 ```
 
+Recursively retrieve snapshots from given dataset and rename them individually. This is much slower thatn the -r
+version.
+```bash
+./rename -f -r -m "@auto" /tank/dataset1/child @auto @manual
+---
+previous snapshot name: /tank/dataset1/child/child@auto-2023-09-25_00-00
+new snapshot name:      /tank/dataset1/child/child@daily-2023-09-25_00-00
+```
+
+Rename snapshots that fall on a given day of the week. The following example finds snapshots that fell on a Tuesday.
+```bash
+./rename -f -d 2 -m "@auto" /tank/dataset1/child @auto @manual
+---
+previous snapshot name: /tank/dataset1/child/child@auto-2023-12-17_00-00
+new snapshot name:      /tank/dataset1/child/child@daily-2023-12-17_00-00
+```
+
+List only snapshots with matching string.
+```bash
+./rename -l -m "@auto" /tank/dataset1/child
+example output
+---
+/tank/dataset1/child/child@auto-2023-12-10_00-00
+/tank/dataset1/child/child@auto-2023-12-17_00-00
+/tank/dataset1/child/child@auto-2023-12-24_00-00
+```
