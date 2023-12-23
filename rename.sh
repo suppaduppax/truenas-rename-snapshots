@@ -1,7 +1,7 @@
 DRY_RUN=1
 LIST_ONLY=0
 
-OPTSTRING=":d:flr:o:"
+OPTSTRING=":d:flm:rR"
 
 while getopts ${OPTSTRING} opt; do
   case ${opt} in
@@ -18,14 +18,19 @@ while getopts ${OPTSTRING} opt; do
       shift
       LIST_ONLY=1
       ;;
-    o)
+    m)
       shift
-      OUTPUT_FILE="$1"
+      PIPE="${PIPE} | grep $1"
+      shift
       ;;
     r)
       shift
-      REGEX="$1"
+      EXTRA_OPTS="${EXTRA_OPTS} -r"
+      ;;
+    R)
+      # use recursive rename
       shift
+      RENAME_EXTRA_OPTS="${RENAME_EXTRA_OPTS} -r"
       ;;
     ?)
       echo "Invalid option: -${OPTARG}."
@@ -37,17 +42,9 @@ done
 MATCH=$2
 REPLACE=$3
 
-if [ ! -z ${REGEX} ]; then
-  SNAPSHOTS=$(zfs list -H -t snapshot -o name -S creation -r $1 | grep "${REGEX}")
-elif [ ! -z "${DAY_OF_WEEK}" ]; then
-  SNAPSHOTS=$(zfs list -H -t snapshot -o name -S creation -r $1)
-fi
 
-if [ "${LIST_ONLY}" -eq 1 ]; then
-  SNAPSHOTS=$(zfs list -H -t snapshot -o name -S creation -r $1 | grep "${REGEX}")
-  echo "${SNAPSHOTS}"
-  exit 0
-fi
+echo "zfs list -H -t snapshot -o name -S creation${EXTRA_OPTS} $1${PIPE}"
+SNAPSHOTS=$(eval "zfs list -H -t snapshot -o name -S creation${EXTRA_OPTS} $1${PIPE}")
 
 dryrun_wrapper () {
   printf "$1\n"
@@ -91,6 +88,24 @@ match_day_of_week () {
   return 0
 }
 
+if [ "${LIST_ONLY}" -eq 1 ]; then
+  if [ ! -z "${DAY_OF_WEEK}" ]; then
+    for snapshot in ${SNAPSHOTS}; do
+      if [ ! -z "${DAY_OF_WEEK}" ]; then
+        match_day_of_week "${snapshot}" "${DAY_OF_WEEK}"
+        if [ $? -eq 1 ]; then
+          continue
+        fi 
+      fi
+      echo "${snapshot}"
+    done
+  else
+    echo "${SNAPSHOTS}"
+  fi
+
+  exit 0
+fi
+
 for snapshot in ${SNAPSHOTS}; do
   if [ ! -z "${DAY_OF_WEEK}" ]; then
     match_day_of_week "${snapshot}" "${DAY_OF_WEEK}"
@@ -99,5 +114,5 @@ for snapshot in ${SNAPSHOTS}; do
     fi 
   fi
   new_snapshot=$(printf ${snapshot} | awk "{ gsub(/${MATCH}/,\"${REPLACE}\"); print }")
-  dryrun_wrapper "zfs rename ${snapshot} ${new_snapshot}"
+  dryrun_wrapper "zfs rename${RENAME_EXTRA_OPTS} ${snapshot} ${new_snapshot}"
 done
