@@ -98,9 +98,13 @@ if [ "${LIST_ONLY}" -eq 1 ]; then
         fi 
       fi
       echo "${snapshot}"
+      total=$((total+1))
     done
+    printf "Total Snapshots: %s\n" "${total}"
   else
     echo "${SNAPSHOTS}"
+    total=$(echo "${SNAPSHOTS}" | wc -l)
+    printf "Total Snapshots: %s\n" "${total}"
   fi
 
   exit 0
